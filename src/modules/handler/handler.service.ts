@@ -31,6 +31,9 @@ import { AddUserResponseModel, RemoveUserResponseModel, GenericResponseModel } f
 export class HandlerService implements OnModuleInit {
     private readonly logger = new Logger(HandlerService.name);
     private capNetAdminAvailable = false;
+    // Enable only with the paired VLESS core which closes authenticated logical
+    // streams in RemoveUser. Source-IP eviction also kills unrelated NAT users.
+    private readonly identityRevocation = process.env.DONBATON_XRAY_IDENTITY_REVOKE === 'true';
 
     constructor(
         @InjectXtls() private readonly xtlsApi: XtlsApi,
@@ -63,7 +66,7 @@ export class HandlerService implements OnModuleInit {
                 this.internalService.addXtlsConfigInbound(item.tag);
             }
 
-            if (hashData.prevVlessUuid) {
+            if (hashData.prevVlessUuid && !this.identityRevocation) {
                 userIps = await this.getUserIps(userId);
             }
 
@@ -205,7 +208,7 @@ export class HandlerService implements OnModuleInit {
                 return ok(new RemoveUserResponseModel(true, null));
             }
 
-            const userIps = await this.getUserIps(username);
+            const userIps = this.identityRevocation ? null : await this.getUserIps(username);
 
             for (const tag of inboundTags) {
                 this.logger.debug(`Removing user: ${username} from tag: ${tag}`);
@@ -216,7 +219,9 @@ export class HandlerService implements OnModuleInit {
                 response.push(tempRes);
             }
 
-            this.eventBus.publish(new DropConnectionsEvent(userIps));
+            if (!this.identityRevocation) {
+                this.eventBus.publish(new DropConnectionsEvent(userIps));
+            }
 
             if (response.every((res) => !res.isOk)) {
                 this.logger.error(JSON.stringify(response, null, 2));
@@ -382,7 +387,7 @@ export class HandlerService implements OnModuleInit {
             for (const user of data.users) {
                 const { userId, hashUuid } = user;
 
-                const userIps = await this.getUserIps(userId);
+                const userIps = this.identityRevocation ? null : await this.getUserIps(userId);
 
                 for (const tag of inboundTags) {
                     this.logger.debug(`Removing user: ${userId} from tag: ${tag}`);
@@ -393,7 +398,9 @@ export class HandlerService implements OnModuleInit {
                     removeUsersResponse.push(tempRes);
                 }
 
-                this.eventBus.publish(new DropConnectionsEvent(userIps));
+                if (!this.identityRevocation) {
+                    this.eventBus.publish(new DropConnectionsEvent(userIps));
+                }
             }
 
             if (removeUsersResponse.every((res) => !res.isOk)) {
