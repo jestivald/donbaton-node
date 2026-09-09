@@ -189,9 +189,9 @@ export class XrayService implements OnApplicationBootstrap {
                 internal: this.internal,
             });
 
-            await this.internalService.extractUsersFromConfig(body.internals.hashes, fullConfig);
-
+            // Validate the core before replacing the active membership/config map.
             await this.coreLoaderService.prepare(fullConfig.geodata);
+            await this.internalService.extractUsersFromConfig(body.internals.hashes, fullConfig);
             await this.geodataService.prepare(fullConfig.geodata);
 
             const xrayProcess = await this.restartXrayProcess();

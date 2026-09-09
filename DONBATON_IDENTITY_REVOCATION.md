@@ -14,16 +14,24 @@ binary and checksum together. A checksum authenticates the release pairing, not
 arbitrary replacement binaries. This mode is scoped to VLESS-only LTE nodes;
 other inbound protocols do not have the new core revocation behavior.
 
+The init script also requires `rw-core` to point to the paired stock binary.
+`CoreLoaderService` rejects panel `geodata.core` overrides in identity mode and
+rechecks the manifest, binary and symlink before a core restart. This validation
+runs before replacing Node's active membership/config map. A malformed override,
+missing manifest, mismatched hash or custom symlink fails without downloading or
+installing another core. Other modes retain upstream custom-core support.
+
 ```sh
 npm ci --ignore-scripts --no-audit --no-fund
-node --test tests/identity-revocation.test.cjs
+node --test tests/identity-revocation.test.cjs tests/core-loader.identity.test.cjs
 npm run typecheck
 NODE_ENV=production npm run build
 ```
 
-The 14 tests invoke the actual service with mocked network/native integrations.
+The 24 tests invoke the actual services with mocked network/native integrations.
 They cover legacy/opt-in paths, single/bulk/rotation, manual IP drops and failed
-Xray removals. Existing native modules are retained from the pinned production
+Xray removals, plus runtime loader pairing and legacy custom-core loading.
+Existing native modules are retained from the pinned production
 image when overlaying dist/main.js. Build in production mode so no hot reload
 entry point or local environment values are included.
 

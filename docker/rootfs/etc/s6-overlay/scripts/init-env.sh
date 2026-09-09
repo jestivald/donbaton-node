@@ -21,7 +21,7 @@ printf '%s' "$XTLS_API_SOCKET_PATH" > "$ENV_DIR/XTLS_API_SOCKET_PATH"
 if [ "${DONBATON_XRAY_IDENTITY_REVOKE:-false}" = true ]; then
     # The automatic source-IP drop may be disabled only with the paired core.
     # A replacement core must get a new reviewed image and checksum manifest.
-    if [ -n "${CUSTOM_CORE_URL:-}" ] || ! sha256sum -c /usr/local/share/donbaton/identity-core.sha256 >/dev/null 2>&1; then
+    if [ -n "${CUSTOM_CORE_URL:-}" ] || [ "$(readlink /usr/local/bin/rw-core)" != /usr/local/bin/xray ] || ! sha256sum -c /usr/local/share/donbaton/identity-core.sha256 >/dev/null 2>&1; then
         echo "[init-env] ERROR: identity revocation requires the verified paired Xray core"
         exit 1
     fi

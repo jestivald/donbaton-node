@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { chmod, readFile, readlink, rename, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import prettyBytes from 'pretty-bytes';
 import { z } from 'zod';
@@ -13,6 +14,7 @@ const CORE_STOCK = '/usr/local/bin/xray';
 const CORE_CUSTOM = '/usr/local/bin/xray-custom';
 const CORE_STAGED = `${CORE_CUSTOM}.staged`;
 const CORE_MARKER = '/usr/local/bin/.rw-core.json';
+const IDENTITY_MANIFEST = '/usr/local/share/donbaton/identity-core.sha256';
 
 const TOTAL_TIMEOUT_MS = 15_000;
 
@@ -39,11 +41,15 @@ interface ICoreMarker {
 @Injectable()
 export class CoreLoaderService {
     private readonly logger = new Logger(CoreLoaderService.name);
+    private readonly identityRevocation = process.env.DONBATON_XRAY_IDENTITY_REVOKE === 'true';
 
     public async prepare(geodata: unknown): Promise<void> {
         const parsed = CoreSchema.safeParse(geodata ?? {});
 
         if (!parsed.success) {
+            if (this.identityRevocation) {
+                throw new Error('Identity revocation requires valid bundled-core configuration');
+            }
             this.logger.warn(
                 `Invalid "core" section, skipped: ${parsed.error.issues
                     .map((issue) => `${issue.path.join('.')} ${issue.message}`)
@@ -53,6 +59,23 @@ export class CoreLoaderService {
         }
 
         const { core } = parsed.data;
+
+        if (this.identityRevocation) {
+            // A panel geodata.core override bypasses the container init script.
+            // Reject it before installing/repointing anything or restarting Xray.
+            if (core) {
+                throw new Error('Identity revocation does not permit a panel custom core');
+            }
+            const manifest = (await readFile(IDENTITY_MANIFEST, 'utf8')).trim();
+            const expected = /^([a-f0-9]{64})\s+\/usr\/local\/bin\/xray$/.exec(manifest);
+            const actual = createHash('sha256')
+                .update(await readFile(CORE_STOCK))
+                .digest('hex');
+            if (!expected || expected[1] !== actual || (await readlink(CORE_LINK)) !== CORE_STOCK) {
+                throw new Error('Identity revocation requires the verified paired Xray core');
+            }
+            return;
+        }
 
         if (!core) {
             await this.restoreStock();
