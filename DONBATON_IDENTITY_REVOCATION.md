@@ -42,3 +42,14 @@ restarts Xray: drain final stats before restart when migrating accounting units.
 Quiescing users via the local Xray API leaves the process and counters alive;
 resume through Node using current panel membership so its local membership map
 is also consistent.
+
+## 3.4.2 line (2026-10-07)
+
+Branch `codex/identity-stream-revocation-342` merges upstream tag 3.4.2
+(`ea7a835485af81ec464ebbf7acaaa7d6dd486a05`) into the 3.4.1 fork without
+conflicts. Upstream added the post-start plugin, a shared webhook helper and
+@remnawave/xtls-sdk 0.17; `docker/` (including init-env.sh) and the bundled
+Xray v26.7.28 are unchanged, so the paired Xray fork binary is reused as is.
+Runtime base: `remnawave/node@sha256:1f97485b4bc7e4944f1ae95cc57d176376813b0022e9567b705f384f1a2e909d`.
+The overlay must use the base matching package-lock.json, because main.js
+keeps node_modules external and loads them from the base image.
