@@ -53,3 +53,14 @@ Xray v26.7.28 are unchanged, so the paired Xray fork binary is reused as is.
 Runtime base: `remnawave/node@sha256:1f97485b4bc7e4944f1ae95cc57d176376813b0022e9567b705f384f1a2e909d`.
 The overlay must use the base matching package-lock.json, because main.js
 keeps node_modules external and loads them from the base image.
+
+## 3.4.3 line (2026-10-23)
+
+Branch `codex/identity-stream-revocation-343` merges upstream tag 3.4.3
+(`2ad154f8f1016c94c1872f337268af878af61b18`) into the 3.4.2 fork line without
+conflicts. Upstream changed only the package version and the Node.js base of
+`docker/Dockerfile` (node:24.20 -> node:24.22, Node.js 24.22.1 security
+release); `docker/rootfs` (including init-env.sh), dependencies and the bundled
+Xray v26.7.28 are unchanged, so the paired Xray fork binary is reused as is.
+The built main.js differs from the 3.4.2 fork build only in the version string.
+Runtime base: `remnawave/node@sha256:793f4ac52289f680ea2b12be8047e93f68b710c22ca93b52b9448a6fef7eaaa6`.
